@@ -347,7 +347,7 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
   };
 
   return (
-    <div ref={containerRef} className={`absolute inset-0 overflow-hidden bg-[#121212] ${interactionsEnabled ? 'touch-none pointer-events-auto' : 'touch-auto pointer-events-none'} ${interactionsEnabled && (isDragging ? 'cursor-grabbing' : 'cursor-grab')}`}>
+    <div ref={containerRef} className={`absolute inset-0 overflow-hidden bg-[#121212] cursor-none ${interactionsEnabled ? 'touch-none pointer-events-auto' : 'touch-auto pointer-events-none'}`}>
       <canvas ref={canvasRef} className="w-full h-full block" 
         onMouseDown={(e) => handleStart(e.clientX, e.clientY)} 
         onMouseMove={(e) => handleMove(e.clientX, e.clientY)} 

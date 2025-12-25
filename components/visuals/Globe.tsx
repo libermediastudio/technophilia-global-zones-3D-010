@@ -269,7 +269,7 @@ export const Globe = forwardRef<GlobeHandle, GlobeProps>(({
   return (
     <div 
       ref={containerRef}
-      className={`w-full h-full relative ${interactionsEnabled ? 'touch-none pointer-events-auto' : 'touch-auto pointer-events-none'} ${interactionsEnabled && (isDragging ? 'cursor-grabbing' : 'cursor-grab')}`} 
+      className={`w-full h-full relative cursor-none ${interactionsEnabled ? 'touch-none pointer-events-auto' : 'touch-auto pointer-events-none'}`} 
       onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
       onMouseMove={(e) => handleMove(e.clientX, e.clientY, e.nativeEvent.offsetX, e.nativeEvent.offsetY)}
       onMouseUp={handleEnd}
