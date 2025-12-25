@@ -18,7 +18,7 @@ export const BodyInfo: React.FC<BodyInfoProps> = ({ config, forceVisible = false
             </div>
 
             <div className="mb-4">
-                <h2 className="text-lg font-black text-white tracking-[0.2em] uppercase leading-none">{config.name}</h2>
+                <h2 className="text-sm font-black text-white tracking-[0.2em] uppercase leading-none">{config.name}</h2>
                 <span className="text-[8px] text-[#E42737] block mt-1 font-bold tracking-[0.4em] uppercase opacity-80">{config.type}</span>
             </div>
 
