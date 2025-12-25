@@ -12,9 +12,13 @@ interface SystemListProps {
 export const SystemList: React.FC<SystemListProps> = ({ bodies, onSelect, forceVisible = false }) => {
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Wykluczamy planety pasywne z listy celów
+  const excludedIds = ['mercury', 'venus', 'jupiter', 'saturn', 'uranus', 'neptune'];
+  
   const filteredBodies = bodies.filter(body => 
-    body.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    body.type.toLowerCase().includes(searchQuery.toLowerCase())
+    !excludedIds.includes(body.id) &&
+    (body.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     body.type.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (

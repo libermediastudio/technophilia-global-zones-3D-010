@@ -19,17 +19,20 @@ interface SolarSystemMapProps {
 const MONO_STACK = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
 const AU = 130;
+// Neutral color for passive planets
+const PASSIVE_COLOR = '#64748b'; 
+
 const ORBIT_CONFIG: Record<string, { distance: number; speed: number; startAngle: number; size: number; color: string; focusZoom: number }> = {
-    mercury: { distance: 0.39 * AU, speed: 1.5, startAngle: 20, size: 3, color: '#A5A5A5', focusZoom: 2.5 },
-    venus: { distance: 0.72 * AU, speed: 1.1, startAngle: 160, size: 5, color: '#E3BB76', focusZoom: 2.0 },
+    mercury: { distance: 0.39 * AU, speed: 1.5, startAngle: 20, size: 3, color: PASSIVE_COLOR, focusZoom: 2.5 },
+    venus: { distance: 0.72 * AU, speed: 1.1, startAngle: 160, size: 5, color: PASSIVE_COLOR, focusZoom: 2.0 },
     earth: { distance: 1.00 * AU, speed: 0.8, startAngle: -45, size: 5.5, color: '#4F97E5', focusZoom: 1.8 }, 
     moon: { distance: 15, speed: 6.0, startAngle: 90, size: 1.5, color: '#DDDDDD', focusZoom: 3.5 }, 
     mars: { distance: 1.52 * AU, speed: 0.6, startAngle: 130, size: 4, color: '#E42737', focusZoom: 2.2 }, 
     belt: { distance: 2.67 * AU, speed: 0.2, startAngle: 220, size: 4, color: '#555', focusZoom: 1.2 }, 
-    jupiter: { distance: 5.20 * AU, speed: 0.15, startAngle: -15, size: 12, color: '#C99039', focusZoom: 0.8 },
-    saturn: { distance: 9.54 * AU, speed: 0.1, startAngle: 70, size: 10, color: '#EAD6B8', focusZoom: 0.7 },
-    uranus: { distance: 19.2 * AU, speed: 0.06, startAngle: 280, size: 7, color: '#D1E7E7', focusZoom: 0.6 },
-    neptune: { distance: 30.06 * AU, speed: 0.04, startAngle: 10, size: 7, color: '#5B5DDF', focusZoom: 0.6 },
+    jupiter: { distance: 5.20 * AU, speed: 0.15, startAngle: -15, size: 12, color: PASSIVE_COLOR, focusZoom: 0.8 },
+    saturn: { distance: 9.54 * AU, speed: 0.1, startAngle: 70, size: 10, color: PASSIVE_COLOR, focusZoom: 0.7 },
+    uranus: { distance: 19.2 * AU, speed: 0.06, startAngle: 280, size: 7, color: PASSIVE_COLOR, focusZoom: 0.6 },
+    neptune: { distance: 30.06 * AU, speed: 0.04, startAngle: 10, size: 7, color: PASSIVE_COLOR, focusZoom: 0.6 },
     io: { distance: 22, speed: 4.0, startAngle: 0, size: 1.2, color: '#F8F', focusZoom: 3.2 },
     europa: { distance: 30, speed: 3.0, startAngle: 45, size: 1.2, color: '#AFA', focusZoom: 3.2 },
     ganymede: { distance: 38, speed: 2.0, startAngle: 90, size: 1.6, color: '#AAF', focusZoom: 3.0 },
@@ -60,6 +63,7 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
   const isTrackingRef = useRef(false);
 
   const targetIds = ['earth', 'moon', 'mars', 'belt', 'io', 'europa', 'ganymede', 'callisto'];
+  const passivePlanetIds = ['mercury', 'venus', 'jupiter', 'saturn', 'uranus', 'neptune'];
   const jovianMoons = ['io', 'europa', 'ganymede', 'callisto'];
 
   useEffect(() => {
@@ -268,7 +272,7 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
         if(obj.id==='belt') { ctx.save(); ctx.translate(obj.x, obj.y); ctx.rotate(Math.PI/4); ctx.rect(-rad,-rad,rad*2,rad*2); ctx.restore(); }
         else { ctx.arc(obj.x, obj.y, rad, 0, Math.PI*2); }
         
-        if (!isTarget) { ctx.fillStyle = '#334155'; ctx.fill(); }
+        if (!isTarget) { ctx.fillStyle = ORBIT_CONFIG[obj.id]?.color || '#334155'; ctx.fill(); }
         else {
             ctx.fillStyle = (isHover || isSelected) ? '#FFF' : '#E42737'; ctx.fill();
             if (isSelected) {
@@ -286,26 +290,48 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
     });
 
     renderQueue.forEach(obj => {
-        const isTarget = targetIds.includes(obj.id); if (!isTarget) return;
-        const isHover = hoveredBodyRef.current === obj.id; const isSelected = currentBodyId === obj.id;
-        let name = obj.id === 'earth' ? 'TERRA' : (obj.id === 'moon' ? 'LUNA' : obj.id.toUpperCase());
+        const isTarget = targetIds.includes(obj.id);
+        const isPassive = passivePlanetIds.includes(obj.id);
+        if (!isTarget && !isPassive) return;
+
+        const isHover = hoveredBodyRef.current === obj.id; 
+        const isSelected = currentBodyId === obj.id;
+        
+        let name = obj.id.toUpperCase();
+        if (obj.id === 'earth') name = 'TERRA';
+        else if (obj.id === 'moon') name = 'LUNA';
+        
         ctx.font = isSelected ? `bold 12px ${MONO_STACK}` : `10px ${MONO_STACK}`;
-        const textW = ctx.measureText(name).width; const boxW = textW + 20; const boxH = 22; const rad = Math.max(1, obj.config.size * obj.scale);
+        const textW = ctx.measureText(name).width; 
+        const boxW = isTarget ? textW + 20 : textW + 10; 
+        const boxH = isTarget ? 22 : 14; 
+        const rad = Math.max(1, obj.config.size * obj.scale);
+        
         const candidates = [{ x: obj.x - boxW/2, y: obj.y + rad + 20, w: boxW, h: boxH }, { x: obj.x - boxW/2, y: obj.y - rad - boxH - 20, w: boxW, h: boxH }, { x: obj.x + rad + 20, y: obj.y - boxH/2, w: boxW, h: boxH }, { x: obj.x - rad - boxW - 20, y: obj.y - boxH/2, w: boxW, h: boxH }];
         let best = candidates[0]; for (const cand of candidates) { let col = false; for (const s of occupiedSpaces) if (checkCollision(cand, s)) { col = true; break; } if (!col) { best = cand; break; } }
         occupiedSpaces.push(best);
         if (!labelPosRef.current.has(obj.id)) labelPosRef.current.set(obj.id, { x: best.x, y: best.y });
         const cur = labelPosRef.current.get(obj.id)!; cur.x += (best.x - cur.x) * 0.15; cur.y += (best.y - cur.y) * 0.15;
-        ctx.strokeStyle = (isHover || isSelected) ? '#FFF' : 'rgba(228, 39, 55, 0.4)';
+
+        // Connector line
+        ctx.strokeStyle = isTarget ? ((isHover || isSelected) ? '#FFF' : 'rgba(228, 39, 55, 0.4)') : ORBIT_CONFIG[obj.id]?.color || '#FFF';
         ctx.beginPath(); ctx.moveTo(obj.x, obj.y); ctx.lineTo(cur.x + boxW/2, cur.y + boxH/2); ctx.stroke();
-        ctx.fillStyle = (isHover || isSelected) ? '#E42737' : 'rgba(10,10,10,0.95)';
-        ctx.beginPath(); ctx.moveTo(cur.x, cur.y); ctx.lineTo(cur.x + boxW, cur.y); ctx.lineTo(cur.x + boxW, cur.y + boxH - 4); ctx.lineTo(cur.x + boxW - 4, cur.y + boxH); ctx.lineTo(cur.x + 4, cur.y + boxH); ctx.lineTo(cur.x, cur.y + boxH - 4);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = (isHover || isSelected) ? '#000' : '#FFF'; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(name, cur.x + boxW/2, cur.y + boxH/2);
+
+        if (isTarget) {
+            ctx.fillStyle = (isHover || isSelected) ? '#E42737' : 'rgba(10,10,10,0.95)';
+            ctx.beginPath(); ctx.moveTo(cur.x, cur.y); ctx.lineTo(cur.x + boxW, cur.y); ctx.lineTo(cur.x + boxW, cur.y + boxH - 4); ctx.lineTo(cur.x + boxW - 4, cur.y + boxH); ctx.lineTo(cur.x + 4, cur.y + boxH); ctx.lineTo(cur.x, cur.y + boxH - 4);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = (isHover || isSelected) ? '#000' : '#FFF'; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(name, cur.x + boxW/2, cur.y + boxH/2);
+        } else {
+            // Passive text label - no box, using planet color
+            ctx.fillStyle = ORBIT_CONFIG[obj.id]?.color || '#FFF';
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(name, cur.x + boxW/2, cur.y + boxH/2);
+        }
     });
     
     (canvasRef.current as any).hitRegions = renderQueue;
-  }, [dims, currentBodyId, targetIds, jovianMoons, zoomRef, MIN_Z, MAX_Z]);
+  }, [dims, currentBodyId, targetIds, jovianMoons, zoomRef, MIN_Z, MAX_Z, passivePlanetIds]);
 
   useEffect(() => {
     const loop = (time: number) => { render(time); animationRef.current = requestAnimationFrame(loop); };
