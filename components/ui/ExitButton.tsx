@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X } from 'lucide-react';
 
@@ -23,10 +24,10 @@ export const ExitButton: React.FC<ExitButtonProps> = ({ onDeactivate }) => {
                 e.stopPropagation();
                 onDeactivate();
               }}
-              className="flex items-center justify-center w-10 h-10 md:w-14 md:h-14 bg-[#E42737] text-black shadow-[0_0_30px_rgba(228,39,55,0.4)] transition-all hover:scale-110 active:scale-90 pointer-events-auto border-2 border-white/20"
+              className="flex items-center justify-center w-8 h-8 md:w-12 md:h-12 bg-[#E42737] text-black shadow-[0_0_20px_rgba(228,39,55,0.4)] transition-all hover:scale-110 active:scale-90 pointer-events-auto border border-white/20"
               title="Terminate session"
             >
-              <X className="w-5 h-5 md:w-8 md:h-8" strokeWidth={3} />
+              <X className="w-4 h-4 md:w-6 md:h-6" strokeWidth={3} />
             </button>
         </div>
     </div>
