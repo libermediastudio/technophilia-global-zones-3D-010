@@ -95,6 +95,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCitySelect = (city: City) => {
+    setSelectedItem(city);
+    if (isMobile) {
+      setMobileInfoVisible(false);
+      setMobileListVisible(false);
+    }
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -127,7 +135,7 @@ const App: React.FC = () => {
               <Globe 
                   ref={globeRef}
                   config={activeConfig} 
-                  onSelect={setSelectedItem}
+                  onSelect={handleCitySelect}
                   selectedCity={selectedItem}
                   onHoverChange={setIsHovering}
                   interactionsEnabled={isActivated}
@@ -135,7 +143,7 @@ const App: React.FC = () => {
               <BodyInfo config={activeConfig} forceVisible={isMobile && mobileInfoVisible} />
               <LocationList 
                   data={activeConfig.data}
-                  onSelect={(city) => { setSelectedItem(city); globeRef.current?.flyTo(city); if(isMobile) setMobileListVisible(false); }} 
+                  onSelect={(city) => { handleCitySelect(city); globeRef.current?.flyTo(city); }} 
                   selectedCity={selectedItem}
                   forceVisible={isMobile && mobileListVisible}
               />
