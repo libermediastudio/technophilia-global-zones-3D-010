@@ -80,6 +80,44 @@ export const Globe = forwardRef<GlobeHandle, GlobeProps>(({
     }
   }));
 
+  const findCityAt = useCallback((offsetX: number, offsetY: number) => {
+    if (dims.width === 0) return null;
+    const proj = d3.geoOrthographic()
+      .scale(scaleRef.current)
+      .translate([dims.width / 2, dims.height / 2])
+      .rotate(rotationRef.current);
+      
+    return config.data.cities.find(c => {
+        const coords = proj([c.lng, c.lat]);
+        if (!coords) return false;
+        let x = coords[0], y = coords[1];
+        if (config.id === 'belt') {
+            const center = [dims.width / 2, dims.height / 2];
+            x = center[0] + (coords[0] - center[0]) * 2.2;
+            y = center[1] + (coords[1] - center[1]) * 2.2;
+        }
+        const vis = config.id === 'belt' || (d3.geoRotation(rotationRef.current)([c.lng, c.lat])[0] > -90 && d3.geoRotation(rotationRef.current)([c.lng, c.lat])[0] < 90);
+        
+        // Sprawdź trafienie w punkt (z buforem)
+        if (vis && Math.hypot(x - offsetX, y - offsetY) < 15) return true;
+        
+        // Sprawdź trafienie w etykietę (jeśli miasto jest wybrane lub aktywne)
+        if (vis && labelPosRef.current.has(c.name)) {
+            const pos = labelPosRef.current.get(c.name)!;
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.font = `bold 12px ${MONO_STACK}`;
+                    const bw = ctx.measureText(c.name).width + 24; const bh = 28;
+                    if (offsetX >= pos.x && offsetX <= pos.x + bw && offsetY >= pos.y && offsetY <= pos.y + bh) return true;
+                }
+            }
+        }
+        return false;
+    });
+  }, [dims, config, rotationRef, scaleRef]);
+
   const render = useCallback((time: number) => {
     const canvas = canvasRef.current; if (!canvas || dims.width === 0) return;
     const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -241,20 +279,8 @@ export const Globe = forwardRef<GlobeHandle, GlobeProps>(({
         if (lastMoveRef.current) momentumRef.current = { x: (clientX - lastMoveRef.current.x) * 0.2, y: -(clientY - lastMoveRef.current.y) * 0.2 };
         lastMoveRef.current = { x: clientX, y: clientY, time: performance.now() };
     }
-    if (dims.width === 0) return;
-    const proj = d3.geoOrthographic().scale(scaleRef.current).translate([dims.width/2, dims.height/2]).rotate(rotationRef.current);
-    const found = config.data.cities.find(c => {
-        const coords = proj([c.lng, c.lat]);
-        if (!coords) return false;
-        let x = coords[0], y = coords[1];
-        if (config.id === 'belt') {
-            const center = [dims.width / 2, dims.height / 2];
-            x = center[0] + (coords[0] - center[0]) * 2.2;
-            y = center[1] + (coords[1] - center[1]) * 2.2;
-        }
-        const vis = config.id==='belt' || (d3.geoRotation(rotationRef.current)([c.lng, c.lat])[0] > -90 && d3.geoRotation(rotationRef.current)([c.lng, c.lat])[0] < 90);
-        return vis && Math.hypot(x - offsetX, y - offsetY) < 15;
-    });
+    
+    const found = findCityAt(offsetX, offsetY);
     if (found !== hoveredItem) { 
         setHoveredItem(found || null); 
         onHoverChange?.(!!found); 
@@ -264,6 +290,19 @@ export const Globe = forwardRef<GlobeHandle, GlobeProps>(({
   const handleEnd = () => {
     setIsDragging(false);
     dragRef.current = null;
+  };
+
+  const handleInteractionClick = (clientX: number, clientY: number) => {
+    if (!interactionsEnabled) return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (rect) {
+      const offsetX = clientX - rect.left;
+      const offsetY = clientY - rect.top;
+      const target = findCityAt(offsetX, offsetY);
+      if (target) {
+        onSelect(target);
+      }
+    }
   };
 
   return (
@@ -281,17 +320,18 @@ export const Globe = forwardRef<GlobeHandle, GlobeProps>(({
           const rect = canvasRef.current?.getBoundingClientRect();
           if (rect) handleMove(touch.clientX, touch.clientY, touch.clientX - rect.left, touch.clientY - rect.top);
       }}
-      onTouchEnd={handleEnd}
+      onTouchEnd={(e) => {
+        handleEnd();
+        // Na mobile onClick może nie zadziałać stabilnie z preventDefault, wywołujemy ręcznie detekcję
+        const touch = e.changedTouches[0];
+        handleInteractionClick(touch.clientX, touch.clientY);
+      }}
       onWheel={(e) => {
         if (interactionsEnabled) {
           targetScaleRef.current = Math.max(MIN_SCALE, Math.min(MAX_SCALE, targetScaleRef.current - e.deltaY * 0.5));
         }
       }} 
-      onClick={() => {
-        if (interactionsEnabled && hoveredItem) {
-          onSelect(hoveredItem);
-        }
-      }}
+      onClick={(e) => handleInteractionClick(e.clientX, e.clientY)}
     >
        <canvas ref={canvasRef} className="block w-full h-full" />
 

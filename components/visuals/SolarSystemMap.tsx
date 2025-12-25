@@ -114,6 +114,13 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
     return (box1.x < box2.x + box2.w && box1.x + box1.w > box2.x && box1.y < box2.y + box2.h && box1.y + box1.h > box2.y);
   };
 
+  const findBodyAt = useCallback((mx: number, my: number) => {
+    const hit = (canvasRef.current as any).hitRegions || []; 
+    let found = hit.find((obj: any) => Math.hypot(mx - obj.x, my - obj.y) < 20 * obj.scale)?.id || null;
+    if (found && !targetIds.includes(found)) found = null;
+    return found;
+  }, [targetIds]);
+
   const render = useCallback((time: number) => {
     const canvas = canvasRef.current; if (!canvas || dims.width === 0) return;
     const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -297,7 +304,7 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
         ctx.fillStyle = (isHover || isSelected) ? '#000' : '#FFF'; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(name, cur.x + boxW/2, cur.y + boxH/2);
     });
     
-    (canvas as any).hitRegions = renderQueue;
+    (canvasRef.current as any).hitRegions = renderQueue;
   }, [dims, currentBodyId, targetIds, jovianMoons, zoomRef, MIN_Z, MAX_Z]);
 
   useEffect(() => {
@@ -321,9 +328,7 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
     }
     if (canvasRef.current) {
         const rect = canvasRef.current.getBoundingClientRect(); const mx = clientX - rect.left; const my = clientY - rect.top;
-        const hit = (canvasRef.current as any).hitRegions || []; 
-        let found = hit.find((obj: any) => Math.hypot(mx - obj.x, my - obj.y) < 20 * obj.scale)?.id || null;
-        if (found && !targetIds.includes(found)) found = null;
+        const found = findBodyAt(mx, my);
         if (found !== hoveredBodyRef.current) { hoveredBodyRef.current = found; onHoverChange?.(!!found); }
     }
   };
@@ -340,9 +345,14 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
     }
   };
 
-  const handleClick = () => {
-    if (interactionsEnabled && hoveredBodyRef.current) {
-      onSelect(hoveredBodyRef.current);
+  const handleInteractionClick = (clientX: number, clientY: number) => {
+    if (!interactionsEnabled) return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (rect) {
+      const found = findBodyAt(clientX - rect.left, clientY - rect.top);
+      if (found) {
+        onSelect(found);
+      }
     }
   };
 
@@ -355,9 +365,13 @@ export const SolarSystemMap = forwardRef<SolarSystemMapHandle, SolarSystemMapPro
         onMouseLeave={handleEnd}
         onTouchStart={(e) => { e.preventDefault(); handleStart(e.touches[0].clientX, e.touches[0].clientY); }}
         onTouchMove={(e) => { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }}
-        onTouchEnd={handleEnd}
+        onTouchEnd={(e) => {
+          handleEnd();
+          const touch = e.changedTouches[0];
+          handleInteractionClick(touch.clientX, touch.clientY);
+        }}
         onWheel={handleWheel}
-        onClick={handleClick} />
+        onClick={(e) => handleInteractionClick(e.clientX, e.clientY)} />
         
       {/* MINIMAL TACTICAL MAP STATUS - TOP LEFT */}
       <div className="absolute top-10 left-6 md:left-10 z-50 pointer-events-none transition-all duration-500 font-mono flex flex-col items-start">
